@@ -288,19 +288,17 @@ const App: React.FC = () => {
   };
 
   const handleLoadSession = (session: SavedSession) => {
-    if (window.confirm(`Load "${session.name}"? Unsaved changes will be lost.`)) {
-      setLeftJson(session.leftJson);
-      setLeftJsonStr(JSON.stringify(session.leftJson, null, 2));
-      setRightJson(session.rightJson);
-      setRightJsonStr(JSON.stringify(session.rightJson, null, 2));
-      setMappings(session.mappings);
+    setLeftJson(session.leftJson);
+    setLeftJsonStr(JSON.stringify(session.leftJson, null, 2));
+    setRightJson(session.rightJson);
+    setRightJsonStr(JSON.stringify(session.rightJson, null, 2));
+    setMappings(session.mappings);
 
-      setLeftViewMode('tree');
-      setRightViewMode('tree');
+    setLeftViewMode('tree');
+    setRightViewMode('tree');
 
-      // dataVersion will be incremented by useEffect when JSON strings change
-      setTimeout(() => setLayoutVersion(v => v + 1), 200);
-    }
+    // dataVersion will be incremented by useEffect when JSON strings change
+    setTimeout(() => setLayoutVersion(v => v + 1), 200);
   };
 
   const handleDeleteSession = (id: string, e: React.MouseEvent) => {
