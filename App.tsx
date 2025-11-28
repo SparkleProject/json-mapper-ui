@@ -298,7 +298,7 @@ const App: React.FC = () => {
       setLeftViewMode('tree');
       setRightViewMode('tree');
 
-      setDataVersion(v => v + 1); // Force remount
+      // dataVersion will be incremented by useEffect when JSON strings change
       setTimeout(() => setLayoutVersion(v => v + 1), 200);
     }
   };
