@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import JsonVisualizer from './components/JsonVisualizer';
 import ConnectionsLayer from './components/ConnectionsLayer';
+import SaveModal from './components/SaveModal';
 import { Mapping, Point, SavedSession } from './types';
 import { getAutoMappings } from './services/geminiService';
 
@@ -43,6 +44,8 @@ const App: React.FC = () => {
 
   const [isAutoMapping, setIsAutoMapping] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveDefaultName, setSaveDefaultName] = useState("");
 
 
   // View modes for panels
@@ -167,10 +170,19 @@ const App: React.FC = () => {
   }, [isResizing, handleGlobalMouseMove, handleGlobalMouseUp]);
 
 
-  const handleNodeSelect = (path: string, side: 'left' | 'right') => {
+  const handleNodeSelect = (path: string, side: 'left' | 'right', event?: React.MouseEvent) => {
     if (side === 'left') {
       // Start connection
       setSelectedSource(path);
+
+      // Immediately set mouse position for temp line if event is available
+      if (event && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setMousePos({
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top
+        });
+      }
     } else {
       // Complete connection if source is selected
       if (selectedSource) {
@@ -215,11 +227,12 @@ const App: React.FC = () => {
 
   // --- SAVE / LOAD LOGIC ---
   const handleSaveSession = () => {
-    const defaultName = `Mapping ${new Date().toLocaleTimeString()}`;
-    const name = prompt("Enter a name for this session (saved to sidebar):", defaultName);
+    setSaveDefaultName(`Mapping ${new Date().toLocaleTimeString()}`);
+    setIsSaveModalOpen(true);
+  };
 
-    if (name === null) return; // Cancelled
-    const finalName = name.trim() || defaultName;
+  const handleConfirmSave = (name: string) => {
+    const finalName = name.trim() || `Mapping ${new Date().toLocaleTimeString()}`;
 
     const newSession: SavedSession = {
       id: Date.now().toString(),
@@ -682,6 +695,13 @@ const App: React.FC = () => {
 
 
       </div>
+
+      <SaveModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        onSave={handleConfirmSave}
+        defaultName={saveDefaultName}
+      />
     </div>
   );
 };

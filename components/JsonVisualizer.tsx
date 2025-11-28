@@ -11,7 +11,7 @@ const JsonVisualizer: React.FC<JsonNodeProps> = ({ data, path, side, onSelect, s
 
   const handleClick = (e: React.MouseEvent, currentPath: string) => {
     e.stopPropagation();
-    onSelect(currentPath, side);
+    onSelect(currentPath, side, e);
   };
 
   const isObject = (val: any) => typeof val === 'object' && val !== null && !Array.isArray(val);
@@ -20,7 +20,7 @@ const JsonVisualizer: React.FC<JsonNodeProps> = ({ data, path, side, onSelect, s
   if (isObject(data)) {
     return (
       <div className="ml-4 font-mono text-sm">
-        <div 
+        <div
           className="flex items-center hover:bg-slate-100 rounded px-1 cursor-pointer select-none"
           onClick={handleToggle}
         >
@@ -53,9 +53,9 @@ const JsonVisualizer: React.FC<JsonNodeProps> = ({ data, path, side, onSelect, s
   if (isArray(data)) {
     return (
       <div className="ml-4 font-mono text-sm">
-        <div 
-           className="flex items-center hover:bg-slate-100 rounded px-1 cursor-pointer select-none"
-           onClick={handleToggle}
+        <div
+          className="flex items-center hover:bg-slate-100 rounded px-1 cursor-pointer select-none"
+          onClick={handleToggle}
         >
           <span className="w-4 text-slate-400 text-xs mr-1">
             <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
@@ -64,20 +64,20 @@ const JsonVisualizer: React.FC<JsonNodeProps> = ({ data, path, side, onSelect, s
           <span className="text-slate-400 ml-2 text-xs">[{data.length}]</span>
         </div>
         {isExpanded && (
-           <div className="border-l border-slate-200 ml-2 pl-2">
-             {data.map((item: any, index: number) => (
-               <JsonVisualizer
-                 key={index}
-                 data={item}
-                 path={`${path}[${index}]`}
-                 side={side}
-                 onSelect={onSelect}
-                 selectedPath={selectedPath}
-                 mappedPaths={mappedPaths}
-                 collapsed={false} // Always expand array items by default now
-               />
-             ))}
-           </div>
+          <div className="border-l border-slate-200 ml-2 pl-2">
+            {data.map((item: any, index: number) => (
+              <JsonVisualizer
+                key={index}
+                data={item}
+                path={`${path}[${index}]`}
+                side={side}
+                onSelect={onSelect}
+                selectedPath={selectedPath}
+                mappedPaths={mappedPaths}
+                collapsed={false} // Always expand array items by default now
+              />
+            ))}
+          </div>
         )}
       </div>
     );
@@ -87,16 +87,16 @@ const JsonVisualizer: React.FC<JsonNodeProps> = ({ data, path, side, onSelect, s
   const isSelected = selectedPath === path;
   const isMapped = mappedPaths.has(path);
   const nodeKey = path.split('.').pop();
-  
+
   // Clean ID for DOM queries
   const domId = `node-${side}-${path}`;
 
   return (
-    <div 
+    <div
       id={domId}
       className={`ml-6 flex items-center justify-between px-2 py-1 my-0.5 rounded border transition-colors duration-200 cursor-pointer text-sm font-mono
-        ${isSelected ? 'bg-blue-100 border-blue-500 shadow-sm' : 'bg-white border-transparent hover:border-slate-300'}
-        ${isMapped && !isSelected ? 'bg-green-50 border-green-200' : ''}
+        ${isSelected ? 'border-blue-500 shadow-sm' : (isMapped ? 'border-green-200' : 'border-transparent hover:border-slate-300')}
+        ${isMapped ? 'bg-green-50' : (isSelected ? 'bg-blue-100' : 'bg-white')}
       `}
       onClick={(e) => handleClick(e, path)}
       data-path={path}

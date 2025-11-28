@@ -1,3 +1,5 @@
+import React from 'react';
+
 export interface Mapping {
   id: string;
   sourcePath: string;
@@ -8,7 +10,7 @@ export interface JsonNodeProps {
   data: any;
   path: string;
   side: 'left' | 'right';
-  onSelect: (path: string, side: 'left' | 'right') => void;
+  onSelect: (path: string, side: 'left' | 'right', event?: React.MouseEvent) => void;
   selectedPath: string | null;
   mappedPaths: Set<string>; // Paths that are already part of a connection
   collapsed?: boolean;
