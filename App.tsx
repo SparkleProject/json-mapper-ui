@@ -33,17 +33,17 @@ const DEFAULT_RIGHT = {
 const App: React.FC = () => {
   const [leftJsonStr, setLeftJsonStr] = useState(JSON.stringify(DEFAULT_LEFT, null, 2));
   const [rightJsonStr, setRightJsonStr] = useState(JSON.stringify(DEFAULT_RIGHT, null, 2));
-  
+
   const [leftJson, setLeftJson] = useState<any>(DEFAULT_LEFT);
   const [rightJson, setRightJson] = useState<any>(DEFAULT_RIGHT);
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
-  
+
   const [isAutoMapping, setIsAutoMapping] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [showHelp, setShowHelp] = useState(true);
+
 
   // View modes for panels
   const [leftViewMode, setLeftViewMode] = useState<'tree' | 'code'>('tree');
@@ -91,6 +91,8 @@ const App: React.FC = () => {
       setLeftJson(l);
       setRightJson(r);
       setJsonError(null);
+      // Force visualizers to update when data changes via text edit
+      setDataVersion(v => v + 1);
     } catch (e) {
       // Silent fail while typing
     }
@@ -108,7 +110,7 @@ const App: React.FC = () => {
     };
     window.addEventListener('resize', updateSize);
     updateSize();
-    
+
     // Update when switching views or content changes
     const timeout = setTimeout(updateSize, 100);
     return () => {
@@ -125,26 +127,26 @@ const App: React.FC = () => {
 
   const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
     if (!isResizing || !containerRef.current) return;
-    
+
     const containerRect = containerRef.current.getBoundingClientRect();
     const relativeX = e.clientX - containerRect.left;
     const totalWidth = containerRect.width;
-    
+
     // Convert to percentage
     let newPercent = (relativeX / totalWidth) * 100;
 
     if (isResizing === 'left') {
-       // Clamp left width (min 20%, max 70% considering right panel)
-       newPercent = Math.max(20, Math.min(newPercent, 80 - rightWidthPercent));
-       setLeftWidthPercent(newPercent);
+      // Clamp left width (min 20%, max 70% considering right panel)
+      newPercent = Math.max(20, Math.min(newPercent, 80 - rightWidthPercent));
+      setLeftWidthPercent(newPercent);
     } else {
-       // Dragging the right divider. 
-       const rightEdgePercent = (relativeX / totalWidth) * 100;
-       const newRightWidth = 100 - rightEdgePercent;
-       
-       // Clamp (min 20%, max space available)
-       const clampedRight = Math.max(20, Math.min(newRightWidth, 80 - leftWidthPercent));
-       setRightWidthPercent(clampedRight);
+      // Dragging the right divider. 
+      const rightEdgePercent = (relativeX / totalWidth) * 100;
+      const newRightWidth = 100 - rightEdgePercent;
+
+      // Clamp (min 20%, max space available)
+      const clampedRight = Math.max(20, Math.min(newRightWidth, 80 - leftWidthPercent));
+      setRightWidthPercent(clampedRight);
     }
     setLayoutVersion(v => v + 1);
   }, [isResizing, rightWidthPercent, leftWidthPercent]);
@@ -177,7 +179,7 @@ const App: React.FC = () => {
           sourcePath: selectedSource,
           targetPath: path
         };
-        
+
         // Check duplicates
         if (!mappings.some(m => m.sourcePath === newMapping.sourcePath && m.targetPath === newMapping.targetPath)) {
           setMappings(prev => [...prev, newMapping]);
@@ -215,7 +217,7 @@ const App: React.FC = () => {
   const handleSaveSession = () => {
     const defaultName = `Mapping ${new Date().toLocaleTimeString()}`;
     const name = prompt("Enter a name for this session (saved to sidebar):", defaultName);
-    
+
     if (name === null) return; // Cancelled
     const finalName = name.trim() || defaultName;
 
@@ -259,7 +261,7 @@ const App: React.FC = () => {
       rightJson,
       mappings
     };
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -279,10 +281,10 @@ const App: React.FC = () => {
       setRightJson(session.rightJson);
       setRightJsonStr(JSON.stringify(session.rightJson, null, 2));
       setMappings(session.mappings);
-      
+
       setLeftViewMode('tree');
       setRightViewMode('tree');
-      
+
       setDataVersion(v => v + 1); // Force remount
       setTimeout(() => setLayoutVersion(v => v + 1), 200);
     }
@@ -313,34 +315,34 @@ const App: React.FC = () => {
       try {
         const content = e.target?.result as string;
         const data = JSON.parse(content);
-        
+
         // Basic validation
         if (data.leftJson && data.rightJson) {
-            if (window.confirm("Importing file will overwrite current workspace. Continue?")) {
-                // 1. Update Objects Directly
-                setLeftJson(data.leftJson);
-                setRightJson(data.rightJson);
-                
-                // 2. Update Strings (Triggers useEffect, ensuring consistency)
-                setLeftJsonStr(JSON.stringify(data.leftJson, null, 2));
-                setRightJsonStr(JSON.stringify(data.rightJson, null, 2));
-                
-                // 3. Update Mappings (Default to empty if missing)
-                setMappings(Array.isArray(data.mappings) ? data.mappings : []);
-                
-                // 4. Force Tree View
-                setLeftViewMode('tree');
-                setRightViewMode('tree');
-                
-                // 5. Force Visualizers to completely remount
-                setDataVersion(v => v + 1);
-                
-                // 6. Schedule Layout Updates to draw lines after DOM is ready
-                setTimeout(() => setLayoutVersion(v => v + 1), 100);
-                setTimeout(() => setLayoutVersion(v => v + 1), 500);
-            }
+          if (window.confirm("Importing file will overwrite current workspace. Continue?")) {
+            // 1. Update Objects Directly
+            setLeftJson(data.leftJson);
+            setRightJson(data.rightJson);
+
+            // 2. Update Strings (Triggers useEffect, ensuring consistency)
+            setLeftJsonStr(JSON.stringify(data.leftJson, null, 2));
+            setRightJsonStr(JSON.stringify(data.rightJson, null, 2));
+
+            // 3. Update Mappings (Default to empty if missing)
+            setMappings(Array.isArray(data.mappings) ? data.mappings : []);
+
+            // 4. Force Tree View
+            setLeftViewMode('tree');
+            setRightViewMode('tree');
+
+            // 5. Force Visualizers to completely remount
+            setDataVersion(v => v + 1);
+
+            // 6. Schedule Layout Updates to draw lines after DOM is ready
+            setTimeout(() => setLayoutVersion(v => v + 1), 100);
+            setTimeout(() => setLayoutVersion(v => v + 1), 500);
+          }
         } else {
-            alert("Invalid file format: Missing 'leftJson' or 'rightJson'.");
+          alert("Invalid file format: Missing 'leftJson' or 'rightJson'.");
         }
       } catch (err) {
         console.error(err);
@@ -349,17 +351,17 @@ const App: React.FC = () => {
     };
     reader.readAsText(file);
     // Reset so same file can be selected again
-    event.target.value = ''; 
+    event.target.value = '';
   };
 
 
   const handleExportPdf = async () => {
     if (!containerRef.current) return;
-    
+
     setLeftViewMode('tree');
     setRightViewMode('tree');
     setIsExporting(true);
-    
+
     try {
       await new Promise(r => setTimeout(r, 500));
 
@@ -374,7 +376,7 @@ const App: React.FC = () => {
       const imgData = canvas.toDataURL('image/png');
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      
+
       const pdf = new jspdf.jsPDF({
         orientation: imgWidth > imgHeight ? 'landscape' : 'portrait',
         unit: 'px',
@@ -393,28 +395,28 @@ const App: React.FC = () => {
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (selectedSource && containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setMousePos({
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        });
+      const rect = containerRef.current.getBoundingClientRect();
+      setMousePos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
     }
   }, [selectedSource]);
 
   // Derived state for temp line
   let tempConnection = null;
   if (selectedSource && mousePos && containerRef.current && leftViewMode === 'tree') {
-      const sourceEl = document.getElementById(`node-left-${selectedSource}`);
-      if (sourceEl) {
-          const rect = sourceEl.getBoundingClientRect();
-          const containerRect = containerRef.current.getBoundingClientRect();
-          tempConnection = {
-              startX: rect.right - containerRect.left,
-              startY: rect.top + rect.height / 2 - containerRect.top,
-              endX: mousePos.x,
-              endY: mousePos.y
-          };
-      }
+    const sourceEl = document.getElementById(`node-left-${selectedSource}`);
+    if (sourceEl) {
+      const rect = sourceEl.getBoundingClientRect();
+      const containerRect = containerRef.current.getBoundingClientRect();
+      tempConnection = {
+        startX: rect.right - containerRect.left,
+        startY: rect.top + rect.height / 2 - containerRect.top,
+        endX: mousePos.x,
+        endY: mousePos.y
+      };
+    }
   }
 
   const leftMapped = new Set(mappings.map(m => m.sourcePath));
@@ -422,21 +424,20 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      
+
       {/* Hidden File Input */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleImportFile} 
-        className="hidden" 
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImportFile}
+        className="hidden"
         accept=".json"
       />
 
       {/* Sidebar */}
-      <div 
-        className={`flex-none bg-white flex flex-col transition-all duration-300 ${
-          isSidebarOpen ? 'w-64 border-r border-slate-200' : 'w-0 border-none overflow-hidden'
-        }`}
+      <div
+        className={`flex-none bg-white flex flex-col transition-all duration-300 ${isSidebarOpen ? 'w-64 border-r border-slate-200' : 'w-0 border-none overflow-hidden'
+          }`}
       >
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <h2 className="font-bold text-slate-700 whitespace-nowrap">Saved Sessions</h2>
@@ -446,26 +447,26 @@ const App: React.FC = () => {
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
           {sessions.length === 0 ? (
-             <div className="text-center text-slate-400 text-sm mt-10">No saved sessions</div>
+            <div className="text-center text-slate-400 text-sm mt-10">No saved sessions</div>
           ) : (
             sessions.map(s => (
-              <div 
+              <div
                 key={s.id}
                 onClick={() => handleLoadSession(s)}
                 className="group p-3 rounded-lg border border-slate-100 hover:border-blue-200 hover:bg-blue-50 cursor-pointer transition-all"
               >
-                 <div className="flex justify-between items-start">
-                    <span className="font-medium text-slate-700 truncate w-40 block" title={s.name}>{s.name}</span>
-                    <button 
-                      onClick={(e) => handleDeleteSession(s.id, e)}
-                      className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <i className="fas fa-trash-alt text-xs"></i>
-                    </button>
-                 </div>
-                 <div className="text-xs text-slate-400 mt-1">
-                   {new Date(s.timestamp).toLocaleDateString()} • {s.mappings.length} links
-                 </div>
+                <div className="flex justify-between items-start">
+                  <span className="font-medium text-slate-700 truncate w-40 block" title={s.name}>{s.name}</span>
+                  <button
+                    onClick={(e) => handleDeleteSession(s.id, e)}
+                    className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <i className="fas fa-trash-alt text-xs"></i>
+                  </button>
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {new Date(s.timestamp).toLocaleDateString()} • {s.mappings.length} links
+                </div>
               </div>
             ))
           )}
@@ -477,24 +478,24 @@ const App: React.FC = () => {
         {/* Header */}
         <header className="flex-none h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm z-20">
           <div className="flex items-center gap-3">
-             {!isSidebarOpen && (
-               <button 
-                 onClick={() => setIsSidebarOpen(true)}
-                 className="text-slate-500 hover:text-blue-600 mr-2 transition-colors"
-                 title="Open Saved Mappings"
-               >
-                 <i className="fas fa-bars text-lg"></i>
-               </button>
-             )}
+            {!isSidebarOpen && (
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="text-slate-500 hover:text-blue-600 mr-2 transition-colors"
+                title="Open Saved Mappings"
+              >
+                <i className="fas fa-bars text-lg"></i>
+              </button>
+            )}
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
               <i className="fas fa-project-diagram"></i>
             </div>
             <h1 className="text-xl font-bold text-slate-800 tracking-tight hidden sm:block">JSON Mapper <span className="text-blue-600">AI</span></h1>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:gap-3">
-            
-            <button 
+
+            <button
               onClick={handleTriggerImport}
               className="px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
               title="Import from file"
@@ -502,7 +503,7 @@ const App: React.FC = () => {
               <i className="fas fa-file-upload"></i> <span className="hidden sm:inline">Import</span>
             </button>
 
-            <button 
+            <button
               onClick={handleExportJson}
               className="px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
               title="Export to JSON file"
@@ -512,7 +513,7 @@ const App: React.FC = () => {
 
             <div className="h-6 w-px bg-slate-300 mx-1"></div>
 
-            <button 
+            <button
               onClick={handleSaveSession}
               className="px-3 py-2 bg-slate-800 text-white hover:bg-slate-700 rounded-md text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
               title="Save to Saved Sessions Sidebar"
@@ -520,14 +521,14 @@ const App: React.FC = () => {
               <i className="fas fa-save"></i> <span className="hidden sm:inline">Save</span>
             </button>
 
-            <button 
+            <button
               onClick={() => setMappings([])}
               className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors"
             >
               Clear Links
             </button>
-            
-            <button 
+
+            <button
               onClick={handleAutoMap}
               disabled={isAutoMapping}
               className="flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 rounded-md border border-purple-200 hover:bg-purple-100 transition-all font-medium disabled:opacity-50 text-sm ml-2"
@@ -536,7 +537,7 @@ const App: React.FC = () => {
               <span className="hidden sm:inline">Auto Map</span>
             </button>
 
-            <button 
+            <button
               onClick={handleExportPdf}
               disabled={isExporting}
               className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-md transition-all font-medium disabled:opacity-50 text-sm ml-2"
@@ -549,157 +550,137 @@ const App: React.FC = () => {
 
         {/* Content */}
         <div className="flex-1 flex overflow-hidden">
-          
-          <div 
-              className="flex-1 relative overflow-auto bg-slate-50/50" 
-              onMouseMove={handleMouseMove}
-              onClick={() => setSelectedSource(null)}
+
+          <div
+            className="flex-1 relative overflow-auto bg-slate-50/50"
+            onMouseMove={handleMouseMove}
+            onClick={() => setSelectedSource(null)}
           >
-              <div 
-                  ref={containerRef}
-                  className="min-h-full w-full flex relative pb-32"
-                  style={{ minWidth: '800px' }} // prevent too much squishing
-              >
-                  {/* SVG Layer */}
-                  <ConnectionsLayer 
-                      mappings={mappings}
-                      containerRef={containerRef}
-                      width={canvasSize.width}
-                      height={canvasSize.height}
-                      onDeleteMapping={handleDeleteMapping}
-                      tempConnection={tempConnection}
-                      layoutVersion={layoutVersion}
-                  />
+            <div
+              ref={containerRef}
+              className="min-h-full w-full flex relative pb-32"
+              style={{ minWidth: '800px' }} // prevent too much squishing
+            >
+              {/* SVG Layer */}
+              <ConnectionsLayer
+                mappings={mappings}
+                containerRef={containerRef}
+                width={canvasSize.width}
+                height={canvasSize.height}
+                onDeleteMapping={handleDeleteMapping}
+                tempConnection={tempConnection}
+                layoutVersion={layoutVersion}
+              />
 
-                  {/* Left Panel */}
-                  <div className="flex flex-col z-10 pl-8 pt-8" style={{ width: `${leftWidthPercent}%` }}>
-                      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden mb-4 flex flex-col h-full min-h-[500px]">
-                          <div className="px-4 py-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center flex-none">
-                              <div className="flex items-center gap-2">
-                                  <h2 className="font-bold text-slate-700">Source Object</h2>
-                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Input</span>
-                              </div>
-                              <button 
-                                  onClick={() => setLeftViewMode(prev => prev === 'tree' ? 'code' : 'tree')}
-                                  className="text-slate-500 hover:text-blue-600 transition-colors text-sm font-medium flex items-center gap-1"
-                              >
-                                  <i className={`fas ${leftViewMode === 'tree' ? 'fa-code' : 'fa-sitemap'}`}></i>
-                                  {leftViewMode === 'tree' ? 'Edit JSON' : 'View Tree'}
-                              </button>
-                          </div>
-                          <div className="flex-1 overflow-auto bg-white relative">
-                              {leftViewMode === 'tree' ? (
-                                  <div className="p-4">
-                                      <JsonVisualizer 
-                                          key={`left-${dataVersion}`}
-                                          data={leftJson} 
-                                          path="" 
-                                          side="left" 
-                                          onSelect={handleNodeSelect}
-                                          selectedPath={selectedSource}
-                                          mappedPaths={leftMapped}
-                                          collapsed={false}
-                                      />
-                                  </div>
-                              ) : (
-                                  <textarea 
-                                      className="w-full h-full p-4 font-mono text-xs resize-none focus:outline-none bg-green-50 text-slate-800"
-                                      value={leftJsonStr}
-                                      onChange={(e) => setLeftJsonStr(e.target.value)}
-                                      spellCheck={false}
-                                      placeholder="Paste Source JSON here..."
-                                  />
-                              )}
-                          </div>
+              {/* Left Panel */}
+              <div className="flex flex-col z-10 pl-8 pt-8" style={{ width: `${leftWidthPercent}%` }}>
+                <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden mb-4 flex flex-col h-full min-h-[500px]">
+                  <div className="px-4 py-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center flex-none">
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-bold text-slate-700">Source Object</h2>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Input</span>
+                    </div>
+                    <button
+                      onClick={() => setLeftViewMode(prev => prev === 'tree' ? 'code' : 'tree')}
+                      className="text-slate-500 hover:text-blue-600 transition-colors text-sm font-medium flex items-center gap-1"
+                    >
+                      <i className={`fas ${leftViewMode === 'tree' ? 'fa-code' : 'fa-sitemap'}`}></i>
+                      {leftViewMode === 'tree' ? 'Edit JSON' : 'View Tree'}
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-auto bg-white relative">
+                    {leftViewMode === 'tree' ? (
+                      <div className="p-4">
+                        <JsonVisualizer
+                          key={`left-${dataVersion}`}
+                          data={leftJson}
+                          path=""
+                          side="left"
+                          onSelect={handleNodeSelect}
+                          selectedPath={selectedSource}
+                          mappedPaths={leftMapped}
+                          collapsed={false}
+                        />
                       </div>
+                    ) : (
+                      <textarea
+                        className="w-full h-full p-4 font-mono text-xs resize-none focus:outline-none bg-green-50 text-slate-800"
+                        value={leftJsonStr}
+                        onChange={(e) => setLeftJsonStr(e.target.value)}
+                        spellCheck={false}
+                        placeholder="Paste Source JSON here..."
+                      />
+                    )}
                   </div>
-
-                  {/* Resizer Left */}
-                  <div 
-                     className="w-4 hover:bg-blue-100 cursor-col-resize flex items-center justify-center group z-20"
-                     onMouseDown={handleMouseDownResize('left')}
-                  >
-                     <div className="w-1 h-8 bg-slate-300 rounded-full group-hover:bg-blue-400"></div>
-                  </div>
-
-                  {/* Middle Spacer (calculated by flex remaining) */}
-                  <div className="flex-1"></div>
-
-                  {/* Resizer Right */}
-                  <div 
-                     className="w-4 hover:bg-blue-100 cursor-col-resize flex items-center justify-center group z-20"
-                     onMouseDown={handleMouseDownResize('right')}
-                  >
-                     <div className="w-1 h-8 bg-slate-300 rounded-full group-hover:bg-blue-400"></div>
-                  </div>
-
-                  {/* Right Panel */}
-                  <div className="flex flex-col z-10 pr-8 pt-8" style={{ width: `${rightWidthPercent}%` }}>
-                      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden mb-4 flex flex-col h-full min-h-[500px]">
-                           <div className="px-4 py-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center flex-none">
-                              <div className="flex items-center gap-2">
-                                  <h2 className="font-bold text-slate-700">Target Object</h2>
-                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Output</span>
-                              </div>
-                              <button 
-                                  onClick={() => setRightViewMode(prev => prev === 'tree' ? 'code' : 'tree')}
-                                  className="text-slate-500 hover:text-blue-600 transition-colors text-sm font-medium flex items-center gap-1"
-                              >
-                                  <i className={`fas ${rightViewMode === 'tree' ? 'fa-code' : 'fa-sitemap'}`}></i>
-                                  {rightViewMode === 'tree' ? 'Edit JSON' : 'View Tree'}
-                              </button>
-                          </div>
-                          <div className="flex-1 overflow-auto bg-white relative">
-                              {rightViewMode === 'tree' ? (
-                                  <div className="p-4">
-                                      <JsonVisualizer 
-                                          key={`right-${dataVersion}`}
-                                          data={rightJson} 
-                                          path="" 
-                                          side="right" 
-                                          onSelect={handleNodeSelect}
-                                          selectedPath={null}
-                                          mappedPaths={rightMapped}
-                                          collapsed={false}
-                                      />
-                                  </div>
-                              ) : (
-                                  <textarea 
-                                      className="w-full h-full p-4 font-mono text-xs resize-none focus:outline-none bg-green-50 text-slate-800"
-                                      value={rightJsonStr}
-                                      onChange={(e) => setRightJsonStr(e.target.value)}
-                                      spellCheck={false}
-                                      placeholder="Paste Target JSON here..."
-                                  />
-                              )}
-                          </div>
-                      </div>
-                  </div>
+                </div>
               </div>
+
+              {/* Resizer Left */}
+              <div
+                className="w-4 hover:bg-blue-100 cursor-col-resize flex items-center justify-center group z-20"
+                onMouseDown={handleMouseDownResize('left')}
+              >
+                <div className="w-1 h-8 bg-slate-300 rounded-full group-hover:bg-blue-400"></div>
+              </div>
+
+              {/* Middle Spacer (calculated by flex remaining) */}
+              <div className="flex-1"></div>
+
+              {/* Resizer Right */}
+              <div
+                className="w-4 hover:bg-blue-100 cursor-col-resize flex items-center justify-center group z-20"
+                onMouseDown={handleMouseDownResize('right')}
+              >
+                <div className="w-1 h-8 bg-slate-300 rounded-full group-hover:bg-blue-400"></div>
+              </div>
+
+              {/* Right Panel */}
+              <div className="flex flex-col z-10 pr-8 pt-8" style={{ width: `${rightWidthPercent}%` }}>
+                <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden mb-4 flex flex-col h-full min-h-[500px]">
+                  <div className="px-4 py-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center flex-none">
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-bold text-slate-700">Target Object</h2>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Output</span>
+                    </div>
+                    <button
+                      onClick={() => setRightViewMode(prev => prev === 'tree' ? 'code' : 'tree')}
+                      className="text-slate-500 hover:text-blue-600 transition-colors text-sm font-medium flex items-center gap-1"
+                    >
+                      <i className={`fas ${rightViewMode === 'tree' ? 'fa-code' : 'fa-sitemap'}`}></i>
+                      {rightViewMode === 'tree' ? 'Edit JSON' : 'View Tree'}
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-auto bg-white relative">
+                    {rightViewMode === 'tree' ? (
+                      <div className="p-4">
+                        <JsonVisualizer
+                          key={`right-${dataVersion}`}
+                          data={rightJson}
+                          path=""
+                          side="right"
+                          onSelect={handleNodeSelect}
+                          selectedPath={null}
+                          mappedPaths={rightMapped}
+                          collapsed={false}
+                        />
+                      </div>
+                    ) : (
+                      <textarea
+                        className="w-full h-full p-4 font-mono text-xs resize-none focus:outline-none bg-green-50 text-slate-800"
+                        value={rightJsonStr}
+                        onChange={(e) => setRightJsonStr(e.target.value)}
+                        spellCheck={false}
+                        placeholder="Paste Target JSON here..."
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        
-        {/* Help */}
-        {showHelp && (
-          <div className="fixed bottom-6 right-6 bg-white p-4 rounded-lg shadow-xl border border-slate-200 max-w-sm z-30 animate-fade-in-up relative">
-            <button 
-              onClick={() => setShowHelp(false)}
-              className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
-            >
-              <i className="fas fa-times text-xs"></i>
-            </button>
-            <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                <i className="fas fa-info-circle text-blue-500"></i> How to use
-            </h3>
-            <ul className="text-sm text-slate-600 space-y-1 list-disc pl-4">
-                <li><strong>Save:</strong> Saves session to left sidebar.</li>
-                <li><strong>Export:</strong> Download .json file of mapping.</li>
-                <li><strong>Import:</strong> Loads .json file to restore work.</li>
-                <li>Drag vertical bars to resize panels.</li>
-                <li>Click nodes to link Source to Target.</li>
-            </ul>
-          </div>
-        )}
+
+
       </div>
     </div>
   );
