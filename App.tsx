@@ -7,7 +7,7 @@ import { getAutoMappings } from './services/geminiService';
 
 // We use a global variable to access jsPDF because of the import style in html
 declare const jspdf: any;
-declare const html2canvas: any;
+declare const domtoimage: any;
 
 const DEFAULT_LEFT = {
   "user": {
@@ -377,16 +377,16 @@ const App: React.FC = () => {
       await new Promise(r => setTimeout(r, 500));
 
       const element = containerRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
+      const dataUrl = await domtoimage.toPng(element, {
+        bgcolor: '#ffffff'
       });
 
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise(resolve => img.onload = resolve);
+
+      const imgWidth = img.width;
+      const imgHeight = img.height;
 
       const pdf = new jspdf.jsPDF({
         orientation: imgWidth > imgHeight ? 'landscape' : 'portrait',
@@ -394,7 +394,7 @@ const App: React.FC = () => {
         format: [imgWidth, imgHeight]
       });
 
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.addImage(dataUrl, 'PNG', 0, 0, imgWidth, imgHeight);
       pdf.save('mapping-diagram.pdf');
     } catch (error) {
       console.error("Export failed", error);
