@@ -71,19 +71,21 @@ const App: React.FC = () => {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [mousePos, setMousePos] = useState<Point | null>(null);
 
-  // Load sessions from local storage
-  useEffect(() => {
-    const saved = localStorage.getItem('json-mapper-sessions');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setSessions(parsed);
-        }
-      } catch (e) {
-        console.error("Failed to load sessions", e);
+  // Load sessions from API
+  const fetchSessions = async () => {
+    try {
+      const res = await fetch('/api/sessions');
+      if (res.ok) {
+        const data = await res.json();
+        setSessions(data);
       }
+    } catch (e) {
+      console.error("Failed to load sessions", e);
     }
+  };
+
+  useEffect(() => {
+    fetchSessions();
   }, []);
 
   // Update JSON objects when strings change
@@ -227,12 +229,17 @@ const App: React.FC = () => {
 
   // --- SAVE / LOAD LOGIC ---
   const handleSaveSession = () => {
-    setSaveDefaultName(`Mapping ${new Date().toLocaleTimeString()}`);
+    const now = new Date();
+    // Format: YYYY-MM-DD HH:mm:ss
+    const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
+    setSaveDefaultName(`Mapping ${dateStr}`);
     setIsSaveModalOpen(true);
   };
 
-  const handleConfirmSave = (name: string) => {
-    const finalName = name.trim() || `Mapping ${new Date().toLocaleTimeString()}`;
+  const handleConfirmSave = async (name: string) => {
+    const now = new Date();
+    const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
+    const finalName = name.trim() || `Mapping ${dateStr}`;
 
     const newSession: SavedSession = {
       id: Date.now().toString(),
@@ -243,17 +250,23 @@ const App: React.FC = () => {
       mappings
     };
 
-    // Save to Sidebar (LocalStorage)
-    setSessions(prevSessions => {
-      const updated = [newSession, ...prevSessions];
-      try {
-        localStorage.setItem('json-mapper-sessions', JSON.stringify(updated));
-      } catch (e) {
-        console.error("Failed to save to localStorage", e);
-        alert("Warning: Could not save to local sidebar (quota might be exceeded).");
+    // Save to API
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSession)
+      });
+
+      if (res.ok) {
+        await fetchSessions(); // Reload list
+      } else {
+        alert("Failed to save session to server.");
       }
-      return updated;
-    });
+    } catch (e) {
+      console.error("Failed to save session", e);
+      alert("Error saving session.");
+    }
 
     if (!isSidebarOpen) {
       setIsSidebarOpen(true);
@@ -301,14 +314,19 @@ const App: React.FC = () => {
     setTimeout(() => setLayoutVersion(v => v + 1), 200);
   };
 
-  const handleDeleteSession = (id: string, e: React.MouseEvent) => {
+  const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm("Delete this saved session?")) {
-      setSessions(prevSessions => {
-        const updated = prevSessions.filter(s => s.id !== id);
-        localStorage.setItem('json-mapper-sessions', JSON.stringify(updated));
-        return updated;
-      });
+      try {
+        const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          await fetchSessions();
+        } else {
+          alert("Failed to delete session.");
+        }
+      } catch (e) {
+        console.error("Failed to delete session", e);
+      }
     }
   };
 
